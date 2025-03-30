@@ -56,7 +56,6 @@ class StockController {
         }
     }
 
-<<<<<<< HEAD
     static async getStocksList(req, res) {
         try {
             const stocks = await stock.find()
@@ -104,32 +103,19 @@ class StockController {
             return res.status(400).send('Average price must be greater than 0')
         }
 
-=======
-    static async addStock(req, res) {
-        const { symbol, currency, avaragePrice } = req.body
-
-        if (!symbol || !currency || !avaragePrice) {
-            return res.status(400).send('All fields are required')
-        }
->>>>>>> 25454c4819959b4b786f4306c5993e2bdc488ef2
         try {
             const stockExists = await stock.findOne({ symbol: symbol })
             if (stockExists) {
                 return res.status(400).send('Stock already exists')
             }
 
-<<<<<<< HEAD
             const newStock = await stock.create({ symbol, currency, averagePrice })
-=======
-            const newStock = await stock.create({ symbol, currency, avaragePrice })
->>>>>>> 25454c4819959b4b786f4306c5993e2bdc488ef2
             res.status(201).json({ msg: 'Stock created successfully', newStock })
         } catch (error) {
             res.status(500).json({ msg: "Something went wrong in the server", error: error.message })
         }
         
     }
-<<<<<<< HEAD
 
     static async deleteStock(req, res) {
         const { id } = req.params
@@ -180,8 +166,6 @@ class StockController {
         }
         
     }
-=======
->>>>>>> 25454c4819959b4b786f4306c5993e2bdc488ef2
 }
 
 export default StockController
