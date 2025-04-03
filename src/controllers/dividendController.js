@@ -69,41 +69,16 @@ class DividendController {
                 row.ticker !== "Ticker"
             )
 
-            // Agrupa os dados pelo campo "ticker" e soma os valores de "valor"
-            // Soma valores de Ações e Fiis com o mesmo ticker
-            const groupedData = {};
-            dataFiltered.forEach(row => {
-                // Remove números do final do ticker para normalizar
-                const normalizedTicker = row.ticker.replace(/[0-9]+$/, "");
+            // Simula o req.body com dataFiltered
+            const simulatedReq = { body: { stocksAndReits: dataFiltered } };
 
-                if (!groupedData[normalizedTicker]) {
-                    groupedData[normalizedTicker] = {
-                        ticker: normalizedTicker,
-                        valor: 0 // Inicializa o valor como 0
-                    };
-                }
-                // Soma os valores e limita as casas decimais a 2
-                groupedData[normalizedTicker].valor = parseFloat(
-                    (groupedData[normalizedTicker].valor + row.valor).toFixed(2)
-                );
-            });
+            // Chama o método saveData passando o simulatedReq
+            const saveResult = await DividendController.saveData(simulatedReq);
 
-            // Converte o objeto agrupado de volta para um array
-            const groupedArray = Object.values(groupedData);
-
-            // Chama o método saveData para salvar os dados processados
-            const saveResult = await DividendController.saveData({
-                body: {
-                    otherData: otherData,
-                    stocksAndReits: dataFiltered
-                }
-            });
-
-            // Retorna os dados como JSON
-            res.status(200).json({ message: saveResult, otherData: otherData, stocksAndReits: dataFiltered });
+            res.status(200).json({ saveResult })
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Erro ao processar o arquivo." });
+            return res.status(500).json({ error: "Erro ao processar o arquivo." });
         }
     }
 
@@ -148,16 +123,94 @@ class DividendController {
 
     static async saveData(req, res) {
         try {
-            const { otherData, stocksAndReits } = req.body;
+            const { stocksAndReits } = req.body;
 
-            // Salva os dados no banco de dados
-            await dividend.insertMany(otherData, { ordered: false }); // `ordered: false` permite continuar mesmo se houver duplicados
-            await dividend.insertMany(stocksAndReits, { ordered: false });
+            // Função para converter datas no formato dd/mm/yyyy para objetos Date
+            const parseDate = (dateString) => {
+                const [day, month, year] = dateString.split('/').map(Number);
+                return new Date(year, month - 1, day);
+            };
 
-            return{ message: "Dados salvos com sucesso!" };
+            const parsedData = stocksAndReits.map(item => ({
+                ...item,
+                movimentacao: parseDate(item.movimentacao), // Converte movimentacao para Date
+                liquidacao: parseDate(item.liquidacao)     // Converte liquidacao para Date
+            }));
+
+            // Insere os dados diretamente no banco de dados
+            const result = await dividend.insertMany(parsedData, { ordered: false });
+
+            return { message: "Dados salvos com sucesso!", result: result };
+        } catch (error) {
+            console.error("Erro ao salvar os dados:", error);
+            return { message: "Erro ao salvar os dados.", error: error.errorResponse.writeErrors.map(e => e.err.op) };
+        }
+
+    }
+
+    static async getAllDividends(req, res) {
+        try {
+            const data = await dividend.find({});
+            if (data.length === 0) {
+                return res.status(404).json({ message: "Nenhum dado encontrado." });
+            }
+            return res.status(200).json(data);
         } catch (error) {
             console.error(error);
-            return ("Erro ao salvar os dados.", error);
+            return res.status(500).json({ error: "Erro ao buscar os dados." });
+        }
+    }
+
+    static async getByTicker(req, res) {
+        try {
+            const { ticker } = req.params;
+            const data = await dividend.find({ ticker: ticker });
+            if (data.length === 0) {
+                return res.status(404).json({ message: "Nenhum dado encontrado para o ticker fornecido." });
+            }
+            return res.status(200).json(data);
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ error: "Erro ao buscar os dados." });
+        }
+    }
+
+    static async getByDate(req, res) {
+        try {
+            const { startDate, endDate } = req.query;
+
+            // Verifica se as datas foram fornecidas
+            if (!startDate || !endDate) {
+                return res.status(400).json({ error: "As datas de início e fim são obrigatórias." });
+            }
+
+            // Converte as strings de datas para objetos Date
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            // Verifica se as datas são válidas
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return res.status(400).json({ error: "As datas fornecidas são inválidas." });
+            }
+
+            // Busca os dados no banco de dados entre as datas fornecidas
+            const data = await dividend.find({
+                movimentacao: {
+                    $gte: start.toISOString().split('T')[0], // Converte para formato YYYY-MM-DD
+                    $lte: end.toISOString().split('T')[0]   // Converte para formato YYYY-MM-DD
+                }
+            });
+
+            // Verifica se algum dado foi encontrado
+            if (data.length === 0) {
+                return res.status(404).json({ message: "Nenhum dado encontrado para o intervalo de datas fornecido." });
+            }
+
+            // Retorna os dados encontrados
+            return res.status(200).json(data);
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ error: "Erro ao buscar os dados." });
         }
     }
 
