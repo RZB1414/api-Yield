@@ -1,4 +1,4 @@
-import { dividend } from "../models/dividend.js";
+import { dividend } from "../models/Dividend.js";
 import XLSX from "xlsx"
 
 class DividendController {
