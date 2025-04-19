@@ -93,20 +93,16 @@ class StockController {
         if (!currency) {
             return res.status(400).send('Currency is required')
         }
-        if (!averagePrice) {
-            return res.status(400).send('Average price is required')
-        }
+        
         if (isNaN(averagePrice)) {
             return res.status(400).send('Average price must be a number')
         }
-        if (averagePrice <= 0) {
-            return res.status(400).send('Average price must be greater than 0')
-        }
+        
 
         try {
             const stockExists = await stock.findOne({ symbol: symbol })
             if (stockExists) {
-                return res.status(400).send('Stock already exists')
+                return res.status(200).send('Stock already exists')
             }
 
             const newStock = await stock.create({ symbol, currency, averagePrice })
@@ -149,9 +145,6 @@ class StockController {
         }
         if (isNaN(averagePrice)) {
             return res.status(400).send('Average price must be a number')
-        }
-        if (averagePrice <= 0) {
-            return res.status(400).send('Average price must be greater than 0')
         }
         try {
             const stockExists = await stock.findById(id)

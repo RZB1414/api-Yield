@@ -3,8 +3,8 @@ import StockController from "../controllers/stockController.js"
 
 const routes = express.Router()
 
-routes.get('/auth/searchStocks', StockController.searchStocks)
-routes.get('/auth/getStockData', StockController.getStockData)
+routes.post('/auth/searchStocks', StockController.searchStocks)
+routes.post('/auth/getStockData', StockController.getStockData)
 routes.get('/auth/getStocksList', StockController.getStocksList)
 routes.get('/auth/getStock/:id', StockController.getStockById)
 routes.post('/auth/addStock', StockController.addStock)
