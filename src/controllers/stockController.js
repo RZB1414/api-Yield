@@ -135,7 +135,7 @@ class StockController {
 
     static async updateStock(req, res) {
         const { id } = req.params
-        const { averagePrice } = req.body
+        const { averagePrice, stocksQuantity } = req.body
 
         if (!id) {
             return res.status(400).send('ID is required')
@@ -146,13 +146,16 @@ class StockController {
         if (isNaN(averagePrice)) {
             return res.status(400).send('Average price must be a number')
         }
+        if (!stocksQuantity || isNaN(stocksQuantity)) {
+            return res.status(400).send('Stocks quantity must be a number');
+        }
         try {
             const stockExists = await stock.findById(id)
             if (!stockExists) {
                 return res.status(400).send('Stock not found')
             }
 
-            const updatedStock = await stock.findByIdAndUpdate(id, { averagePrice }, { new: true })
+            const updatedStock = await stock.findByIdAndUpdate(id, { averagePrice, stocksQuantity }, { new: true })
             res.status(200).json({ msg: 'Stock updated successfully', updatedStock })
         } catch (error) {
             res.status(500).json({ msg: "Something went wrong in the server", error: error.message })
