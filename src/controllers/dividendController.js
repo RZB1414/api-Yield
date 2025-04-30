@@ -36,6 +36,7 @@ class DividendController {
                 "PIS E COFINS S/ MULTA": "PIS E COFINS",
                 "MULTA S/ SALDO DEVEDOR EM C/C NO DIA ANTERIOR": "MULTA SALDO NEGATIVO",
                 "Pagamento para BANCO XP S/A": "CARTAO DE CREDITO",
+                "Pagamento agendado para BANCO XP S/A": "CARTAO DE CREDITO",
                 "RESGATE Trend Investback FIC FIRF Simples": "CASHBACK CARTAO",
                 "IOF S/RESGATE FUNDOS Trend Investback FIC FIRF Simples": "IOF CASHBACK CARTAO",
                 "Transferência enviada para a conta digital": "TRANSF ENVIADA CONTA DIGITAL",
@@ -123,7 +124,7 @@ class DividendController {
 
     static async saveData(req, res) {
         try {
-            const { stocksAndReits } = req.body;
+            const { lancamento } = req.body;
 
             // Função para converter datas no formato dd/mm/yyyy para objetos Date
             const parseDate = (dateString) => {
@@ -131,14 +132,13 @@ class DividendController {
                 return new Date(year, month - 1, day);
             };
 
-            const parsedData = stocksAndReits.map(item => ({
+            const parsedData = lancamento.map(item => ({
                 ...item,
-                movimentacao: parseDate(item.movimentacao), // Converte movimentacao para Date
                 liquidacao: parseDate(item.liquidacao)     // Converte liquidacao para Date
             }));
 
             // Insere os dados diretamente no banco de dados
-            const result = await dividend.insertMany(parsedData, { ordered: false });
+            const result = await dividend.create(parsedData);
 
             return { message: "Dados salvos com sucesso!", result: result };
         } catch (error) {

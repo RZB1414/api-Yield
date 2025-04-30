@@ -1,7 +1,7 @@
 import mongoose from "mongoose"
 
 const dividendSchema = new mongoose.Schema({
-    movimentacao: { type: Date, required: true },
+    movimentacao: { type: Date },
     liquidacao: { type: Date, required: true },
     lancamento: { type: String, required: true },
     valor: { type: Number, required: true },
