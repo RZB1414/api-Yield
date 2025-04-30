@@ -36,7 +36,7 @@ const app = express();
 app.use(cors({
     origin: (origin, callback) => {
         // Permitir apenas origens específicas ou todas as origens
-        const allowedOrigins = ['http://localhost:3001', 'https://api-yield.vercel.app'];
+        const allowedOrigins = ['http://localhost:3001', 'https://react-yield.vercel.app'];
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
