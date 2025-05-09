@@ -4,10 +4,25 @@ class TotalValueBrokerController {
 
     static async createTotalValueBroker(req, res) {
         const { date, currency, totalValueInUSD, totalValueInBRL, broker } = req.body
-        if (!date || !currency || !broker) {
+        if (!date || !currency || !totalValueInUSD || !totalValueInBRL || !broker) {
             return res.status(400).send('All fields are required')
         }
         try {
+            // Calcula o início e o fim do mês da data fornecida
+            const startOfMonth = new Date(new Date(date).getFullYear(), new Date(date).getMonth(), 1);
+            const endOfMonth = new Date(new Date(date).getFullYear(), new Date(date).getMonth() + 1, 0);
+
+            // Verifica se já existe uma entrada para o mesmo corretor no mesmo mês
+            const existingEntry = await totalValueBroker.findOne({
+                broker: broker,
+                date: { $gte: startOfMonth, $lte: endOfMonth }
+            });
+
+            if (existingEntry) {
+                return res.status(400).json({ msg: "An entry for this broker already exists this month." });
+            }
+
+            // Cria uma nova entrada se não houver conflito
             const newTotalValueBroker = new totalValueBroker({
                 date,
                 currency,
@@ -16,7 +31,7 @@ class TotalValueBrokerController {
                 broker
             })
             await newTotalValueBroker.save()
-            res.status(201).json({message :'New Total Value Created ', data: newTotalValueBroker})
+            res.status(201).json({ message: 'New Total Value Created ', data: newTotalValueBroker })
         } catch (error) {
             res.status(500).json({ msg: "Error creating total value broker", error: error.message })
         }
@@ -62,7 +77,7 @@ class TotalValueBrokerController {
             res.status(500).json({ msg: "Error updating total value broker", error: error.message })
         }
     }
-    
+
     static async deleteTotalValueBroker(req, res) {
         const { id } = req.params
         if (!id) {
