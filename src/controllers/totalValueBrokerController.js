@@ -5,7 +5,7 @@ class TotalValueBrokerController {
     static async createTotalValueBroker(req, res) {
         const { date, currency, totalValueInUSD, totalValueInBRL, broker } = req.body
         if (!date || !currency || !totalValueInUSD || !totalValueInBRL || !broker) {
-            return res.status(400).send('All fields are required')
+            return res.status(200).json({ msg: "All fields are required"})
         }
         try {
             // Calcula o início e o fim do mês da data fornecida
@@ -19,7 +19,7 @@ class TotalValueBrokerController {
             });
 
             if (existingEntry) {
-                return res.status(400).json({ msg: "An entry for this broker already exists this month." });
+                return res.status(200).json({ msg: "An entry for this broker already exists this month" });
             }
 
             // Cria uma nova entrada se não houver conflito
@@ -62,19 +62,44 @@ class TotalValueBrokerController {
         }
     }
 
-    static async updateTotalValueBroker(req, res) {
-        const { id } = req.params
-        if (!id) {
-            return res.status(400).send('ID is required')
+        static async updateTotalValueBroker(req, res) {
+        const { broker, monthIndex, type, newValue } = req.body;
+    
+        if (!broker || monthIndex === undefined || !type || newValue === undefined) {
+            return res.status(400).json({ msg: "All fields (broker, monthIndex, type, newValue) are required" });
         }
+    
         try {
-            const updatedTotalValueBroker = await totalValueBroker.findByIdAndUpdate(id, req.body, { new: true })
-            if (!updatedTotalValueBroker) {
-                return res.status(404).send('Total value broker not found')
+            // Calcula o início e o fim do mês com base no monthIndex
+            const currentYear = new Date().getFullYear();
+            const startOfMonth = new Date(currentYear, monthIndex, 1);
+            const endOfMonth = new Date(currentYear, monthIndex + 1, 0);
+    
+            // Encontra a entrada correspondente no banco de dados
+            const totalValueBrokerEntry = await totalValueBroker.findOne({
+                broker: broker,
+                date: { $gte: startOfMonth, $lte: endOfMonth }
+            });
+    
+            if (!totalValueBrokerEntry) {
+                return res.status(404).json({ msg: "Total value broker entry not found for the specified month and broker" });
             }
-            res.status(200).json({ message: 'Total value broker updated', data: updatedTotalValueBroker })
+    
+            // Atualiza o campo correspondente (type pode ser "totalValueInUSD" ou "totalValueInBRL")
+            if (type === "totalValueInUSD") {
+                totalValueBrokerEntry.totalValueInUSD = newValue;
+            } else if (type === "totalValueInBRL") {
+                totalValueBrokerEntry.totalValueInBRL = newValue;
+            } else {
+                return res.status(400).json({ msg: "Invalid type. Must be 'totalValueInUSD' or 'totalValueInBRL'" });
+            }
+    
+            // Salva as alterações no banco de dados
+            await totalValueBrokerEntry.save();
+    
+            res.status(200).json({ msg: "Total value broker updated successfully", data: totalValueBrokerEntry });
         } catch (error) {
-            res.status(500).json({ msg: "Error updating total value broker", error: error.message })
+            res.status(500).json({ msg: "Error updating total value broker", error: error.message });
         }
     }
 

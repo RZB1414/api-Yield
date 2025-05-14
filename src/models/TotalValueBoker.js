@@ -5,8 +5,8 @@ const totalValueBrokerSchema = new mongoose.Schema({
     id: { type: mongoose.Schema.Types.ObjectId },
     date: { type: Date, required: true, default: Date.now },
     currency: { type: String, required: true },
-    totalValueInUSD: { type: Number, required: true },
-    totalValueInBRL: { type: Number, required: true },
+    totalValueInUSD: { type: Number },
+    totalValueInBRL: { type: Number },
     broker: brokerSchema
 })
 

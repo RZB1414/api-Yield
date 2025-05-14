@@ -8,7 +8,7 @@ class DividendController {
             // Verifica se o arquivo foi enviado
             if (!req.file) {
                 return res.status(400).json({ error: "Nenhum arquivo enviado." });
-            }
+            }            
 
             // Lê o arquivo XLSX da memória
             const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
@@ -26,7 +26,7 @@ class DividendController {
                 lancamento: row["Lançamento"] || row["__EMPTY_2"],
                 valor: parseFloat(row["Valor (R$)"] || row["__EMPTY_4"]) || 0, // Converte para número
                 ticker: DividendController.extractTicker(row["Lançamento"] || row["__EMPTY_2"]) // Extrai o ticker
-            }));
+            }))
 
             // Mapeamento de lançamentos permitidos para seus respectivos tickers
             const lancamentoToTicker = {
@@ -44,34 +44,33 @@ class DividendController {
             };
 
             // Lista de tipos de lançamentos permitidos
-            const allowedLancamentos = Object.keys(lancamentoToTicker);
-
-            // Converte os dados da planilha para JSON e filtra apenas os lançamentos permitidos
-            let otherData = dataMapped.filter(row => {
-                const lancamento = (row["lancamento"] || row["__EMPTY_2"] || "").trim().toUpperCase(); // Normaliza o valor
-                const matchedLancamento = allowedLancamentos.find(allowed => lancamento.includes(allowed.toUpperCase())); // Verifica se contém algum valor permitido
-                if (matchedLancamento) {
-                    row.ticker = lancamentoToTicker[matchedLancamento]; // Adiciona o ticker correspondente
-                    return true;
-                }
-                return false;
-            });
+            const allowedLancamentos = Object.keys(lancamentoToTicker)
 
             // Filtra os dados para eliminar linhas que não contêm todos os campos necessários
-            const dataFiltered = dataMapped.filter(row =>
-                row.movimentacao &&
-                row.lancamento &&
-                row.valor &&
-                row.ticker && // Certifica-se de que o ticker foi extraído
-                row.movimentacao !== "Movimentação" && // Ignora cabeçalhos
-                row.liquidacao !== "Liquidação" &&
-                row.lancamento !== "Lançamento" &&
-                row.valor !== "Valor (R$)" &&
-                row.ticker !== "Ticker"
-            )
+            const dataFiltered = dataMapped.filter(row => {
+                const lancamento = (row.lancamento || "").trim().toUpperCase(); // Normaliza o valor
+                const matchedLancamento = allowedLancamentos.find(allowed => lancamento.includes(allowed.toUpperCase())); // Verifica se contém algum valor permitido
+            
+                if (matchedLancamento) {
+                    row.ticker = lancamentoToTicker[matchedLancamento]; // Adiciona o ticker correspondente
+                }
+            
+                return (
+                    row.movimentacao &&
+                    row.lancamento &&
+                    row.valor &&
+                    row.ticker && // Certifica-se de que o ticker foi extraído ou mapeado
+                    row.movimentacao !== "Movimentação" && // Ignora cabeçalhos
+                    row.liquidacao !== "Liquidação" &&
+                    row.lancamento !== "Lançamento" &&
+                    row.valor !== "Valor (R$)" &&
+                    row.ticker !== "Ticker"
+                );
+            })
 
             // Simula o req.body com dataFiltered
             const simulatedReq = { body: { stocksAndReits: dataFiltered } };
+            
 
             // Chama o método saveData passando o simulatedReq
             const saveResult = await DividendController.saveData(simulatedReq);
@@ -94,11 +93,17 @@ class DividendController {
 
     // Função para extrair o ticker do campo "lancamento"
     static extractTicker(lancamento) {
+        if (!lancamento || typeof lancamento !== "string") {
+            return "SemTicker"; // Retorna "SemTicker" se o campo estiver vazio ou inválido
+        }
+        
         // Lista de palavras que não devem ser consideradas tickers
         const blacklist = ["CBLC", "IRRF", "FIRF"];
 
         // Regex para capturar tickers com ou sem números (ex.: "PETR4", "VALE", etc.)
         const tickerRegex = /\b[A-Z]{4}[0-9]{0,2}\b/g;
+
+
 
         // Procura todos os possíveis tickers na string
         const matches = lancamento.match(tickerRegex);
@@ -124,7 +129,7 @@ class DividendController {
 
     static async saveData(req, res) {
         try {
-            const { lancamento } = req.body;
+            const { stocksAndReits } = req.body
 
             // Função para converter datas no formato dd/mm/yyyy para objetos Date
             const parseDate = (dateString) => {
@@ -132,15 +137,23 @@ class DividendController {
                 return new Date(year, month - 1, day);
             };
 
-            const parsedData = lancamento.map(item => ({
+            const parsedData = stocksAndReits.map(item => ({
                 ...item,
+                movimentacao: item.movimentacao ? parseDate(item.movimentacao) : null,
                 liquidacao: parseDate(item.liquidacao)     // Converte liquidacao para Date
             }));
 
-            // Insere os dados diretamente no banco de dados
-            const result = await dividend.create(parsedData);
-
-            return { message: "Dados salvos com sucesso!", result: result };
+            try {
+                const result = await dividend.insertMany(parsedData, { ordered: false }); // 'ordered: false' continua mesmo com duplicatas
+                return ({ message: "Dados salvos com sucesso!", result });
+            } catch (error) {
+                if (error.code === 11000) {
+                    console.warn("Alguns documentos duplicados foram ignorados.");
+                    return ({ message: "Dados salvos com duplicatas ignoradas." });
+                } else {
+                    throw error; // Repassa outros erros
+                }
+            }
         } catch (error) {
             console.error("Erro ao salvar os dados:", error);
             return { message: "Erro ao salvar os dados.", error: error.errorResponse.writeErrors.map(e => e.err.op) };
@@ -152,7 +165,7 @@ class DividendController {
         try {
             const data = await dividend.find({});
             if (data.length === 0) {
-                return res.status(404).json({ message: "Nenhum dado encontrado." });
+                return res.status(200).json({ message: "Nenhum dado encontrado." });
             }
             return res.status(200).json(data);
         } catch (error) {
