@@ -24,7 +24,7 @@ class EncryptedDividendsController {
             const { userId } = req.params
             const records = await encryptedDividends.find({ userId })
             if (records.length === 0) {
-                return res.status(404).json({ message: "No records found for this user" })
+                return ({ message: "No records found for this user" })
             }
             res.status(200).json(records)
         } catch (error) {
@@ -38,7 +38,7 @@ class EncryptedDividendsController {
             const { userId } = req.params
             const result = await encryptedDividends.deleteMany({ userId })
             if (result.deletedCount === 0) {
-                return res.status(404).json({ message: "No records found for this user" })
+                return ({ message: "No records found for this user" })
             }
             res.status(200).json({ message: "Records deleted successfully" })
         } catch (error) {

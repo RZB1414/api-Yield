@@ -46,8 +46,15 @@ class DividendController {
             // Lista de tipos de lançamentos permitidos
             const allowedLancamentos = Object.keys(lancamentoToTicker)
 
+            console.log('dataFiltered', dataMapped);
+            
+
             // Filtra os dados para eliminar linhas que não contêm todos os campos necessários
             const dataFiltered = dataMapped.filter(row => {
+                if (!row.lancamento || typeof row.lancamento !== "string") {
+                    return false; // Ignora os dados sem o campo lancamento
+                }
+
                 const lancamento = (row.lancamento || "").trim().toUpperCase(); // Normaliza o valor
                 const matchedLancamento = allowedLancamentos.find(allowed => lancamento.includes(allowed.toUpperCase())); // Verifica se contém algum valor permitido
             
@@ -129,6 +136,7 @@ class DividendController {
 
     static async saveData(req, res) {
         try {
+            
             const { stocksAndReits } = req.body
 
             // Função para converter datas no formato dd/mm/yyyy para objetos Date
