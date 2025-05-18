@@ -10,5 +10,11 @@ const totalValueBrokerSchema = new mongoose.Schema({
     broker: brokerSchema
 })
 
+// Índice único para garantir apenas uma entrada por corretora e mês
+totalValueBrokerSchema.index(
+    { "broker._id": 1, date: 1 },
+    { unique: true }
+)
+
 const totalValueBroker = mongoose.model("totalValueBrokers", totalValueBrokerSchema)
 export { totalValueBroker, totalValueBrokerSchema }

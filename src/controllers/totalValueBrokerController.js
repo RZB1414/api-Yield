@@ -2,38 +2,44 @@ import { totalValueBroker } from "../models/TotalValueBoker.js"
 
 class TotalValueBrokerController {
 
-    static async createTotalValueBroker(req, res) {
-        const { date, currency, totalValueInUSD, totalValueInBRL, broker } = req.body
+        static async createTotalValueBroker(req, res) {
+        const { date, currency, totalValueInUSD, totalValueInBRL, broker } = req.body;
         if (!date || !currency || !totalValueInUSD || !totalValueInBRL || !broker) {
-            return res.status(200).json({ msg: "All fields are required"})
+            return res.status(200).json({ msg: "All fields are required"});
         }
         try {
-            // Calcula o início e o fim do mês da data fornecida
-            const startOfMonth = new Date(new Date(date).getFullYear(), new Date(date).getMonth(), 1);
-            const endOfMonth = new Date(new Date(date).getFullYear(), new Date(date).getMonth() + 1, 0);
+                
+            const d = new Date(date);
+        const month = d.getUTCMonth();
+        const year = d.getUTCFullYear();
 
-            // Verifica se já existe uma entrada para o mesmo corretor no mesmo mês
-            const existingEntry = await totalValueBroker.findOne({
-                broker: broker,
-                date: { $gte: startOfMonth, $lte: endOfMonth }
-            });
-
+        // Busca por corretora e mês/ano (ignorando o dia e fuso horário)
+        const existingEntry = await totalValueBroker.findOne({
+            "broker._id": broker._id,
+            $expr: {
+                $and: [
+                    { $eq: [{ $month: "$date" }, month + 1] }, // $month é 1-based
+                    { $eq: [{ $year: "$date" }, year] }
+                ]
+            }
+        })
+    
             if (existingEntry) {
                 return res.status(200).json({ msg: "An entry for this broker already exists this month" });
             }
-
-            // Cria uma nova entrada se não houver conflito
+    
+            // Salva a data normalizada
             const newTotalValueBroker = new totalValueBroker({
-                date,
+                date: date,
                 currency,
                 totalValueInUSD,
                 totalValueInBRL,
                 broker
-            })
-            await newTotalValueBroker.save()
-            res.status(201).json({ message: 'New Total Value Created ', data: newTotalValueBroker })
+            });
+            await newTotalValueBroker.save();
+            res.status(201).json({ msg: 'New Total Value Created', data: newTotalValueBroker });
         } catch (error) {
-            res.status(500).json({ msg: "Error creating total value broker", error: error.message })
+            res.status(500).json({ msg: "Error creating total value broker", error: error.message });
         }
     }
 
