@@ -3,6 +3,8 @@ import mongoose from "mongoose"
 const encryptedDividendsSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     encryptedData: { type: String, required: true },
+    salt: { type: String, required: true },
+    iv: { type: String, required: true },
     hash: { type: String, required: true, unique: true }
 })
 

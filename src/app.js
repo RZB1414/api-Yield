@@ -23,7 +23,7 @@ app.use(cors({
 }));
 
 // Middleware para parsing de JSON e URL-encoded
-app.use(express.json());
+app.use(express.json({ limit: '10000mb' })); // Aumenta o limite de tamanho do JSON
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware para timeout de requisição
