@@ -3,14 +3,15 @@ import { broker } from "../models/Broker.js"
 class BrokerController {
 
     static async createBroker(req, res) {
-        const { brokerName, currency } = req.body
+        const { brokerName, currency, userId } = req.body
         if (!brokerName || !currency) {
             return res.status(400).send('Broker name and currency are required')
         }
         try {
             const newBroker = new broker({
                 broker: brokerName,
-                currency: currency
+                currency: currency,
+                userId: userId
             })
             await newBroker.save()
             res.status(201).json(newBroker)

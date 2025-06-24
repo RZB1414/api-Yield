@@ -13,6 +13,8 @@ class EncryptedDividendsController {
             let duplicatedCount = 0;
     
             try {
+                console.log("Attempting to insert records:", records);
+                
                 const result = await encryptedDividends.insertMany(records, { ordered: false });
                 insertedCount = result.length;
                 duplicatedCount = records.length - insertedCount;

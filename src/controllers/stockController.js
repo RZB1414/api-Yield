@@ -84,7 +84,7 @@ class StockController {
     }
 
     static async addStock(req, res) {
-        const { symbol, currency, averagePrice } = req.body
+        const { symbol, currency, averagePrice, userId } = req.body
 
         if (!symbol) {
             return res.status(400).send('Symbol is required')
@@ -105,7 +105,7 @@ class StockController {
                 return res.status(200).send('Stock already exists')
             }
 
-            const newStock = await stock.create({ symbol, currency, averagePrice })
+            const newStock = await stock.create({ symbol, currency, averagePrice, userId })
             res.status(201).json({ msg: 'Stock created successfully', newStock })
         } catch (error) {
             res.status(500).json({ msg: "Something went wrong in the server", error: error.message })

@@ -1,11 +1,12 @@
 import mongoose from "mongoose"
+import { userSchema } from "./User.js"
 
 const encryptedDividendsSchema = new mongoose.Schema({
-    userId: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
     encryptedData: { type: String, required: true },
     salt: { type: String, required: true },
     iv: { type: String, required: true },
-    hash: { type: String, required: true, unique: true }
+    hash: { type: String, required: true }
 })
 
 // Define um índice único para evitar duplicação

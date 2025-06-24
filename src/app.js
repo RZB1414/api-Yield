@@ -2,6 +2,7 @@ import express from 'express';
 import routes from './routes/index.js';
 import cors from 'cors';
 import { dividend } from './models/Dividend.js';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
@@ -25,6 +26,8 @@ app.use(cors({
 // Middleware para parsing de JSON e URL-encoded
 app.use(express.json({ limit: '10000mb' })); // Aumenta o limite de tamanho do JSON
 app.use(express.urlencoded({ extended: true }));
+// Middleware para parsing de cookies
+app.use(cookieParser());
 
 // Middleware para timeout de requisição
 app.use((req, res, next) => {

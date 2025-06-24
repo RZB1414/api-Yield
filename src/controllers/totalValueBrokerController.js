@@ -3,7 +3,7 @@ import { totalValueBroker } from "../models/TotalValueBoker.js"
 class TotalValueBrokerController {
 
         static async createTotalValueBroker(req, res) {
-        const { date, currency, totalValueInUSD, totalValueInBRL, broker } = req.body;
+        const { date, currency, totalValueInUSD, totalValueInBRL, broker, userId } = req.body;
         if (!date || !currency || !totalValueInUSD || !totalValueInBRL || !broker) {
             return res.status(200).json({ msg: "All fields are required"});
         }
@@ -34,7 +34,8 @@ class TotalValueBrokerController {
                 currency,
                 totalValueInUSD,
                 totalValueInBRL,
-                broker
+                broker,
+                userId: userId
             });
             await newTotalValueBroker.save();
             res.status(201).json({ msg: 'New Total Value Created', data: newTotalValueBroker });

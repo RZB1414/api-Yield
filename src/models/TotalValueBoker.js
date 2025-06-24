@@ -1,5 +1,6 @@
 import mongoose from "mongoose"
 import { brokerSchema } from "./Broker.js"
+import { userSchema } from "./User.js"
 
 const totalValueBrokerSchema = new mongoose.Schema({
     id: { type: mongoose.Schema.Types.ObjectId },
@@ -7,7 +8,8 @@ const totalValueBrokerSchema = new mongoose.Schema({
     currency: { type: String, required: true },
     totalValueInUSD: { type: Number },
     totalValueInBRL: { type: Number },
-    broker: brokerSchema
+    broker: brokerSchema,
+    userId: { type: userSchema, required: true }
 })
 
 // Índice único para garantir apenas uma entrada por corretora e mês
