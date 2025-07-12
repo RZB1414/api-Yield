@@ -1,15 +1,14 @@
 import mongoose from "mongoose"
 import { brokerSchema } from "./Broker.js"
-import { userSchema } from "./User.js"
 
 const totalValueBrokerSchema = new mongoose.Schema({
-    id: { type: mongoose.Schema.Types.ObjectId },
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
     date: { type: Date, required: true, default: Date.now },
     currency: { type: String, required: true },
     totalValueInUSD: { type: Number },
     totalValueInBRL: { type: Number },
     broker: brokerSchema,
-    userId: { type: userSchema, required: true }
+    userId: { type: mongoose.Schema.Types.ObjectId, required: true }
 })
 
 // Índice único para garantir apenas uma entrada por corretora e mês

@@ -4,7 +4,7 @@ class BrokerController {
 
     static async createBroker(req, res) {
         const { brokerName, currency, userId } = req.body
-        if (!brokerName || !currency) {
+        if (!brokerName || !currency || !userId) {
             return res.status(400).send('Broker name and currency are required')
         }
         try {
@@ -21,11 +21,15 @@ class BrokerController {
     }
 
     static async getBrokers(req, res) {
+        const { id } = req.params;
         try {
-            const brokers = await broker.find()
-            res.status(200).json(brokers)
+            if (!id) {
+                return res.status(400).json({ msg: "userId is required" });
+            }
+            const brokers = await broker.find({ userId: id });
+            res.status(200).json(brokers);
         } catch (error) {
-            res.status(500).json({ msg: "Error fetching brokers", error: error.message })
+            res.status(500).json({ msg: "Error fetching brokers", error: error.message });
         }
     }
 

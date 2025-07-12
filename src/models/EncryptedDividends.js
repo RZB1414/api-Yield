@@ -1,5 +1,4 @@
 import mongoose from "mongoose"
-import { userSchema } from "./User.js"
 
 const encryptedDividendsSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },

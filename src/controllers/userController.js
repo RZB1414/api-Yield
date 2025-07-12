@@ -50,14 +50,14 @@ class UserController {
             res
                 .cookie("accessToken", accessToken, {
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === "production",
-                    sameSite: "None",
+                    secure: true, //process.env.NODE_ENV === "production",
+                    sameSite: "None", //"Strict",
                     maxAge: 15 * 60 * 1000
                 })
                 .cookie("refreshToken", refreshToken, {
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === "production",
-                    sameSite: "None",
+                    secure: true,  //process.env.NODE_ENV === "production",
+                    sameSite: "None", //"Strict",
                     maxAge: 7 * 24 * 60 * 60 * 1000
                 })
                 .status(200)
@@ -122,13 +122,11 @@ class UserController {
 
     static async getMe(req, res) {
         const token = req.cookies.accessToken;
-        console.log("Access token from cookies:", req.cookies);
         
         if (!token) return res.status(401).json({ msg: "Access token not found" });
 
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            console.log("Decoded user data:", decoded);
             
             return res.status(200).json({ id: decoded.id, email: decoded.email });
         } catch (err) {

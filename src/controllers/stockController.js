@@ -57,8 +57,9 @@ class StockController {
     }
 
     static async getStocksList(req, res) {
+        const { id } = req.params
         try {
-            const stocks = await stock.find()
+            const stocks = await stock.find({ userId: id })
             res.status(200).json(stocks)
         } catch (error) {
             res.status(500).json({ msg: "Error fetching stock list", error: error.message })
@@ -84,33 +85,33 @@ class StockController {
     }
 
     static async addStock(req, res) {
-        const { symbol, currency, averagePrice, userId } = req.body
+        const { symbol, currency, averagePrice, stocksQuantity, userId } = req.body;
+        console.log('body', req.body);
 
         if (!symbol) {
-            return res.status(400).send('Symbol is required')
+            return res.status(400).send('Symbol is required');
         }
 
         if (!currency) {
-            return res.status(400).send('Currency is required')
+            return res.status(400).send('Currency is required');
         }
-        
-        if (isNaN(averagePrice)) {
-            return res.status(400).send('Average price must be a number')
+
+        if (!userId) {
+            return res.status(400).send('userId is required in body');
         }
-        
 
         try {
-            const stockExists = await stock.findOne({ symbol: symbol })
+            const stockExists = await stock.findOne({ symbol: symbol });
             if (stockExists) {
-                return res.status(200).send('Stock already exists')
+                return res.status(200).send('Stock already exists');
             }
 
-            const newStock = await stock.create({ symbol, currency, averagePrice, userId })
-            res.status(201).json({ msg: 'Stock created successfully', newStock })
+            const newStock = await stock.create({ symbol, currency, averagePrice, stocksQuantity, userId });
+            res.status(201).json({ msg: 'Stock created successfully', newStock });
         } catch (error) {
-            res.status(500).json({ msg: "Something went wrong in the server", error: error.message })
+            console.log(error);
+            res.status(500).json({ msg: "Something went wrong in the server", error: error.message });
         }
-        
     }
 
     static async deleteStock(req, res) {

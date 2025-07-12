@@ -1,7 +1,7 @@
 import express from 'express';
 import routes from './routes/index.js';
 import cors from 'cors';
-import { dividend } from './models/Dividend.js';
+import { encryptedDividends } from './models/EncryptedDividends.js';
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -39,11 +39,12 @@ app.use((req, res, next) => {
     next();
 });
 
-// Sincronização dos índices do modelo 'dividend'
+// Sincronização dos índices do modelo 'dividend' e exibição dos índices atuais
 (async () => {
     try {
-        await dividend.syncIndexes(); // Sincroniza os índices com o banco de dados
-        console.log("Índices sincronizados com sucesso!");
+        await encryptedDividends.syncIndexes(); // Sincroniza os índices com o banco de dados
+        const indexes = await encryptedDividends.collection.getIndexes();
+        console.log("Índices sincronizados com sucesso! Índices atuais:", indexes);
     } catch (error) {
         console.error("Erro ao sincronizar os índices:", error);
     }
