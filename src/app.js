@@ -7,20 +7,37 @@ import cookieParser from 'cookie-parser';
 const app = express();
 
 // Configuração de CORS
+// app.use(cors({
+//     origin: (origin, callback) => {
+//         // Permitir apenas origens específicas ou todas as origens
+//         const allowedOrigins = ['http://localhost:3001', 'https://react-yield.vercel.app'];
+//         if (!origin || allowedOrigins.includes(origin)) {
+//             callback(null, true);
+//         } else {
+//             callback(new Error('Not allowed by CORS'));
+//         }
+//     },
+//     credentials: true, // Permite envio de cookies e credenciais
+//     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+//     allowedHeaders: ['Content-Type', 'Authorization'],
+//     maxAge: 300
+// }));
+
+const allowedOrigins = ['http://localhost:3001', 'https://react-yield.vercel.app'];
+
 app.use(cors({
-    origin: (origin, callback) => {
-        // Permitir apenas origens específicas ou todas as origens
-        const allowedOrigins = ['http://localhost:3001', 'https://react-yield.vercel.app'];
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true, // Permite envio de cookies e credenciais
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    maxAge: 300
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie'],
+  maxAge: 300
+}));
+
+// Opcional: responder manualmente a OPTIONS para garantir CORS em serverless
+app.options('*', cors({
+  origin: allowedOrigins,
+  credentials: true
 }));
 
 // Middleware para parsing de JSON e URL-encoded
