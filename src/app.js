@@ -23,33 +23,20 @@ const app = express();
 //     maxAge: 300
 // }));
 
-
-// CORS para produção e dev (Vercel e local)
 const allowedOrigins = ['http://localhost:3001', 'https://react-yield.vercel.app'];
+
 app.use(cors({
-  origin: function(origin, callback) {
-    // Permite requests sem origin (ex: mobile, curl) e das origins permitidas
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie'],
   maxAge: 300
 }));
 
-// Garante resposta ao preflight em serverless
+// Opcional: responder manualmente a OPTIONS para garantir CORS em serverless
 app.options('*', cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true
 }));
 
