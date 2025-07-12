@@ -6,6 +6,21 @@ import cookieParser from 'cookie-parser';
 
 const app = express();
 
+// Middleware para garantir conexão com o banco em cada request (serverless friendly)
+import { dbConnection, connection } from './config/dbConnect.js';
+app.use(async (req, res, next) => {
+  if (!connection || connection.readyState !== 1) {
+    try {
+      await dbConnection();
+      console.log('Conexão com o banco restabelecida');
+    } catch (err) {
+      console.error('Erro ao conectar com o banco:', err);
+      return res.status(500).json({ aviso: 'Erro ao conectar com o banco de dados.' });
+    }
+  }
+  next();
+});
+
 // Configuração de CORS
 // app.use(cors({
 //     origin: (origin, callback) => {
