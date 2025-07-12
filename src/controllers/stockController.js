@@ -62,7 +62,7 @@ class StockController {
             const stocks = await stock.find({ userId: id })
             res.status(200).json(stocks)
         } catch (error) {
-            res.status(500).json({ msg: "Error fetching stock list", error: error.message })
+            res.status(200).json({ msg: "Error fetching stock list", error: error.message })
         }
     }
 
