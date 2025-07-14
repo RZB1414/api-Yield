@@ -38,7 +38,9 @@ class StockController {
         let attempt = 0;
         while (attempt < 2) {
             try {
-                const stockData = await yahooFinance.quoteSummary(stock);
+                const stockData = await yahooFinance.quoteSummary(stock); 
+                console.log(`Stock data for ${stock}:`, stockData);
+                               
                 if (!stockData || !stockData.price) {
                     return res.status(200).json({ aviso: "Stock not found or data unavailable" });
                 }
@@ -48,7 +50,7 @@ class StockController {
                     exchange: stockData.price.exchangeName,
                     currency: stockData.price.currency,
                     currentPrice: stockData.price.regularMarketPrice,
-                    marketTime: stockData.price.regularMarketTime,
+                    dayPriceChangePercent: stockData.price.regularMarketChangePercent,
                 }
                 return res.status(200).json({'stock info: ' : stockInfo});
             } catch (error) {
