@@ -39,7 +39,6 @@ class StockController {
         while (attempt < 2) {
             try {
                 const stockData = await yahooFinance.quoteSummary(stock); 
-                console.log(`Stock data for ${stock}:`, stockData);
                                
                 if (!stockData || !stockData.price) {
                     return res.status(200).json({ aviso: "Stock not found or data unavailable" });
