@@ -1,6 +1,6 @@
 # 📊 API Yield
 
-A backend API built with **Node.js**, **TypeScript**, and **MongoDB** to manage financial asset returns, 
+A backend API built with **Node.js**, **JavaScript**, and **MongoDB** to manage financial asset returns, 
 including dividends and performance tracking. The goal is to register and analyze income generated from investments.
 
 ---
@@ -17,7 +17,7 @@ I decided to build my own tailored solution — and that’s how this project st
 
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)  
 ![Tech](https://img.shields.io/badge/built%20with-Node.js-blue)  
-![TypeScript](https://img.shields.io/badge/language-TypeScript-blue)  
+![JavaScript](https://img.shields.io/badge/language-JavaScript-yellow) 
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -26,7 +26,7 @@ I decided to build my own tailored solution — and that’s how this project st
 
 - [Node.js](https://nodejs.org/)  
 - [Express](https://expressjs.com/)  
-- [TypeScript](https://www.typescriptlang.org/)  
+- [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)  
 - [Mongoose (MongoDB)](https://mongoosejs.com/)  
 - [dotenv](https://github.com/motdotla/dotenv)  
 - [Nodemon](https://nodemon.io/)
@@ -41,12 +41,16 @@ src/
 ├── controllers/    # Endpoint logic
 ├── models/         # Mongoose schemas
 ├── routes/         # API routes
-├── server.ts       # App entry point
+├── server.js       # App entry point
 
 🧪 Features
 Register financial assets
 
+Brazilian and US stocks
+
 Store dividend and valuation data
+
+Store credit card statements
 
 Calculate returns per asset
 
@@ -67,12 +71,7 @@ cd api-Yield
 # Install dependencies
 npm install
 
-# Create your .env file based on the example
-cp .env.example .env
-
-# Edit the .env file with your MongoDB connection string
-# Example:
-# MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/yield
+# Create your .env file
 
 # Start the development server
 npm run dev
@@ -81,13 +80,13 @@ npm run dev
 📄 Environment Variables
 You must create your own .env file with the following keys:
 
-ini
-Copiar
-Editar
-MONGO_URI=your_mongodb_connection_string
-PORT=3000
+DB_USER
+DB_PASSWORD
+JWT_SECRET
+JWT_REFRESH_SECRET
 
 🧑‍💻 Author
 Developed by Renan Buiatti
-📫 renan@email.com
-🌐 LinkedIn
+📫 renanbuiatti14@gmail.com
+🌐 LinkedIn www.linkedin.com/in/renan-buiatti-13787924a
+📷 Instagram renanbuiatti
