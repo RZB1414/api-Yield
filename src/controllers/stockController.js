@@ -1,5 +1,6 @@
 import yahooFinance from "yahoo-finance2"
 import { stock } from "../models/Stock.js"
+import CryptoJS from "crypto-js"
 
 class StockController {
 
@@ -67,8 +68,33 @@ class StockController {
         let attempt = 0;
         while (attempt < 2) {
             try {
-                const stocks = await stock.find({ userId: id })
-                return res.status(200).json(stocks)
+                const secretKey = process.env.CRYPTO_SECRET;
+                const stocks = await stock.find({ userId: id });
+                const decryptedStocks = stocks.map(item => {
+                    let symbol = item.symbol;
+                    let currency = item.currency;
+                    let averagePrice = item.averagePrice;
+                    let stocksQuantity = item.stocksQuantity;
+                    let userId = item.userId;
+                    try {
+                        symbol = CryptoJS.AES.decrypt(symbol, secretKey).toString(CryptoJS.enc.Utf8);
+                        currency = CryptoJS.AES.decrypt(currency, secretKey).toString(CryptoJS.enc.Utf8);
+                        averagePrice = CryptoJS.AES.decrypt(averagePrice, secretKey).toString(CryptoJS.enc.Utf8);
+                        stocksQuantity = CryptoJS.AES.decrypt(stocksQuantity, secretKey).toString(CryptoJS.enc.Utf8)
+                    } catch (e) {
+                        // Se falhar, retorna os dados como estão
+                    }
+                    return {
+                        _id: item._id,
+                        symbol,
+                        currency,
+                        averagePrice,
+                        stocksQuantity,
+                        userId
+                    };
+                });
+                
+                return res.status(200).json(decryptedStocks)
             } catch (error) {
                 attempt++;
                 if (attempt === 2) {
@@ -120,7 +146,19 @@ class StockController {
                 if (stockExists) {
                     return res.status(200).json({ aviso: 'Stock already exists' });
                 }
-                const newStock = await stock.create({ symbol, currency, averagePrice, stocksQuantity, userId });
+
+                const secretKey = process.env.CRYPTO_SECRET;
+                const encryptedSymbol = CryptoJS.AES.encrypt(symbol, secretKey).toString();
+                const encryptedCurrency = CryptoJS.AES.encrypt(currency, secretKey).toString();
+                const encryptedAveragePrice = CryptoJS.AES.encrypt(averagePrice.toString(), secretKey).toString();
+                const encryptedStocksQuantity = CryptoJS.AES.encrypt(stocksQuantity.toString(), secretKey).toString();
+                const newStock = await stock.create({
+                    symbol: encryptedSymbol,
+                    currency: encryptedCurrency,
+                    averagePrice: encryptedAveragePrice,
+                    stocksQuantity: encryptedStocksQuantity,
+                    userId: userId
+                });
                 return res.status(201).json({ msg: 'Stock created successfully', newStock });
             } catch (error) {
                 attempt++;
@@ -178,7 +216,14 @@ class StockController {
                 if (!stockExists) {
                     return res.status(200).json({ aviso: 'Stock not found' });
                 }
-                const updatedStock = await stock.findByIdAndUpdate(id, { averagePrice, stocksQuantity }, { new: true })
+                const secretKey = process.env.CRYPTO_SECRET;
+                const encryptedAveragePrice = CryptoJS.AES.encrypt(averagePrice.toString(), secretKey).toString();
+                const encryptedStocksQuantity = CryptoJS.AES.encrypt(stocksQuantity.toString(), secretKey).toString();
+                const updatedStock = await stock.findByIdAndUpdate(
+                    id,
+                    { averagePrice: encryptedAveragePrice, stocksQuantity: encryptedStocksQuantity },
+                    { new: true }
+                );
                 return res.status(200).json({ msg: 'Stock updated successfully', updatedStock });
             } catch (error) {
                 attempt++;

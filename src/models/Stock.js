@@ -4,8 +4,8 @@ const stockSchema = new mongoose.Schema({
     id: { type: mongoose.Schema.Types.ObjectId },
     symbol: { type: String, required: true },
     currency: { type: String, required: true },
-    averagePrice: { type: Number },
-    stocksQuantity: { type: Number },
+    averagePrice: { type: String },
+    stocksQuantity: { type: String },
     userId: { type: String, required: true }
 })
 

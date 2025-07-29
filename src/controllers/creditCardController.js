@@ -1,9 +1,11 @@
 import { creditCard } from "../models/CreditCard.js"
+import CryptoJS from "crypto-js"
 
 class CreditCardController {
 
     static async createCardTransaction(req, res) {
         const { bank, date, currency, value, userId } = req.body;
+        
         if (!bank || !date || !currency || !value || !userId) {
             return res.status(400).json({ msg: "All fields are required" });
         }
@@ -27,19 +29,28 @@ class CreditCardController {
                 return res.status(400).json({ msg: "An entry for this bank already exists this month" });
             }
 
+            // Criptografa os valores antes de salvar
+            const secretKey = process.env.CRYPTO_SECRET;
+            const encryptedBank = CryptoJS.AES.encrypt(bank, secretKey).toString();
+            const encryptedCurrency = CryptoJS.AES.encrypt(currency, secretKey).toString();
+            const encryptedValue = CryptoJS.AES.encrypt(value.toString(), secretKey).toString();
+
+
             // Salva a data normalizada
             const newCreditCard = new creditCard({
-                bank,
+                bank: encryptedBank,
                 date,
-                currency,
-                value,
+                currency: encryptedCurrency,
+                value: encryptedValue,
                 userId
             });
 
             await newCreditCard.save();
             res.status(201).json({ msg: 'New Credit Card Created', data: newCreditCard });
+            
         } catch (error) {
             res.status(500).json({ msg: "Error creating credit card", error: error.message });
+            
         }
     }
 
@@ -47,7 +58,14 @@ class CreditCardController {
         const { id } = req.params;
         try {
             const creditCards = await creditCard.find({ userId: id });
-            res.status(200).json(creditCards);
+            const decryptedCards = creditCards.map(card => ({
+                ...card._doc,
+                bank: CryptoJS.AES.decrypt(card.bank, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8),
+                currency: CryptoJS.AES.decrypt(card.currency, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8),
+                value: Number(CryptoJS.AES.decrypt(card.value, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8))
+            }));
+            
+            res.status(200).json(decryptedCards);
         } catch (error) {
             res.status(500).json({ msg: "Error fetching credit cards", error: error.message });
         }

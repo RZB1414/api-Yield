@@ -5,7 +5,7 @@ const creditCardSchema = new mongoose.Schema({
     bank: { type: String, required: true },
     date: { type: Date, required: true, default: Date.now },
     currency: { type: String, required: true },
-    value: { type: Number, required: true },
+    value: { type: String, required: true },
     userId: { type: String, required: true }
 })
 
