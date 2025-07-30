@@ -58,13 +58,23 @@ class CreditCardController {
         const { id } = req.params;
         try {
             const creditCards = await creditCard.find({ userId: id });
-            const decryptedCards = creditCards.map(card => ({
-                ...card._doc,
-                bank: CryptoJS.AES.decrypt(card.bank, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8),
-                currency: CryptoJS.AES.decrypt(card.currency, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8),
-                value: Number(CryptoJS.AES.decrypt(card.value, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8))
-            }));
-            
+            const secretKey = process.env.CRYPTO_SECRET;
+            if (!secretKey) {
+                return res.status(500).json({ msg: "CRYPTO_SECRET is not set in environment variables" });
+            }
+            const decryptedCards = [];
+            for (const card of creditCards) {
+                try {
+                    decryptedCards.push({
+                        ...card._doc,
+                        bank: CryptoJS.AES.decrypt(card.bank, secretKey).toString(CryptoJS.enc.Utf8),
+                        currency: CryptoJS.AES.decrypt(card.currency, secretKey).toString(CryptoJS.enc.Utf8),
+                        value: Number(CryptoJS.AES.decrypt(card.value, secretKey).toString(CryptoJS.enc.Utf8))
+                    });
+                } catch (decryptionError) {
+                    return res.status(500).json({ msg: "Error decrypting credit card data", error: decryptionError.message });
+                }
+            }
             res.status(200).json(decryptedCards);
         } catch (error) {
             res.status(500).json({ msg: "Error fetching credit cards", error: error.message });
