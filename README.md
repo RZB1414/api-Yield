@@ -13,6 +13,12 @@ I constantly deal with financial accounts across multiple banks, brokers, and cu
 After struggling to find an app that could manage my international finances the way I needed,  
 I decided to build my own tailored solution — and that’s how this project started.
 
+## 🔐 Data Security
+
+The API was designed with data protection in mind.  
+All sensitive information is **encrypted before being stored** in the MongoDB database,  
+ensuring privacy, integrity, and compliance with best practices.
+
 ---
 
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)  
@@ -56,11 +62,6 @@ Calculate returns per asset
 
 Query all assets or individual records
 
-## 🔐 Data Security
-
-The API was designed with data protection in mind.  
-All sensitive information is **encrypted before being stored** in the MongoDB database,  
-ensuring privacy, integrity, and compliance with best practices.
 
 ⚙️ Running the project locally
 Requirements
