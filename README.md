@@ -56,6 +56,12 @@ Calculate returns per asset
 
 Query all assets or individual records
 
+## 🔐 Data Security
+
+The API was designed with data protection in mind.  
+All sensitive information is **encrypted before being stored** in the MongoDB database,  
+ensuring privacy, integrity, and compliance with best practices.
+
 ⚙️ Running the project locally
 Requirements
 Node.js and npm installed
