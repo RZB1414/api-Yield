@@ -6,6 +6,8 @@ class TotalValueBrokerController {
     static async createTotalValueBroker(req, res) {
 
         const { date, currency, totalValueInUSD, totalValueInBRL, broker, userId } = req.body;
+        console.log("Creating total value broker with data:", req.body);
+        
         if (!date || !currency || !totalValueInUSD || !totalValueInBRL || !broker || !userId) {
             return res.status(200).json({ msg: "All fields are required" });
         }
