@@ -28,11 +28,15 @@ class UserController {
 
     static async login(req, res) {
         const { email, password } = req.body;
+        console.log('Login attempt with email: ', email);
+        
         if (!email || !password) {
             return res.status(400).json({ msg: "Email and password are required" });
         }
         try {
             const foundUser = await user.findOne({ email });
+            console.log('Found user: ', foundUser);
+            
             if (!foundUser) {
                 return res.status(401).json({ msg: "Invalid email or password" });
             }
@@ -44,7 +48,6 @@ class UserController {
             // Gera tokens
             const payload = { id: foundUser._id, email: foundUser.email };
             const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "15m" });
-            const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
             // Define cookies seguros
             res
@@ -54,44 +57,10 @@ class UserController {
                     sameSite: "None", //"Strict",
                     maxAge: 15 * 60 * 1000
                 })
-                .cookie("refreshToken", refreshToken, {
-                    httpOnly: true,
-                    secure: true,  //process.env.NODE_ENV === "production",
-                    sameSite: "None", //"Strict",
-                    maxAge: 7 * 24 * 60 * 60 * 1000
-                })
                 .status(200)
                 .json({ msg: "Login successful" })
         } catch (error) {
             res.status(500).json({ msg: "Error logging in", error: error.message });
-        }
-    }
-
-    static async refreshToken(req, res) {
-        const refreshToken = req.cookies.refreshToken
-        if (!refreshToken) {
-            return res.status(400).json({ msg: "Refresh token is required" });
-        }
-        try {
-            jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, userData) => {
-                if (err) {
-                    return res.status(403).json({ msg: "Invalid refresh token" });
-                }
-                // Gera novo access token
-                const payload = { id: userData.id, email: userData.email };
-                const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "15m" });
-                res
-                    .cookie("accessToken", newAccess, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === "production",
-                        sameSite: "Strict",
-                        maxAge: 15 * 60 * 1000
-                    })
-                    .status(200)
-                    .json({ msg: "Access token refreshed" })
-            });
-        } catch (error) {
-            res.status(500).json({ msg: "Error refreshing token", error: error.message });
         }
     }
 
