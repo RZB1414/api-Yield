@@ -29,14 +29,14 @@ class UserController {
     static async login(req, res) {
         const { email, password } = req.body;
         console.log('Login attempt with email: ', email);
-        
+
         if (!email || !password) {
             return res.status(400).json({ msg: "Email and password are required" });
         }
         try {
             const foundUser = await user.findOne({ email });
             console.log('Found user: ', foundUser);
-            
+
             if (!foundUser) {
                 return res.status(401).json({ msg: "Invalid email or password" });
             }
@@ -45,20 +45,12 @@ class UserController {
                 return res.status(401).json({ msg: "Invalid email or password" });
             }
 
-            // Gera tokens
+            // Gera token JWT
             const payload = { id: foundUser._id, email: foundUser.email };
             const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "15m" });
 
-            // Define cookies seguros
-            res
-                .cookie("accessToken", accessToken, {
-                    httpOnly: true,
-                    secure: true, //process.env.NODE_ENV === "production",
-                    sameSite: "None", //"Strict",
-                    maxAge: 15 * 60 * 1000
-                })
-                .status(200)
-                .json({ msg: "Login successful" })
+            // Retorna o token no corpo da resposta
+            res.status(200).json({ msg: "Login successful", accessToken });
         } catch (error) {
             res.status(500).json({ msg: "Error logging in", error: error.message });
         }
@@ -90,13 +82,14 @@ class UserController {
     }
 
     static async getMe(req, res) {
-        const token = req.cookies.accessToken;
-        
+        // Espera o token no header Authorization: Bearer <token>
+        const authHeader = req.headers["authorization"];
+        const token = authHeader && authHeader.split(" ")[1];
+
         if (!token) return res.status(401).json({ msg: "Access token not found" });
 
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            
             return res.status(200).json({ id: decoded.id, email: decoded.email });
         } catch (err) {
             return res.status(403).json({ msg: "Invalid access token" });
