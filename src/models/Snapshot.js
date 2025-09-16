@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 const snapshotSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   symbol: { type: String, required: true }, // encrypted
-  symbolHash: { type: String, required: true, index: true },
+  symbolHash: { type: String, required: true },
   currency: { type: String, required: true }, // encrypted
   closePrice: { type: String, required: true }, // encrypted numeric as string
   dayChange: { type: String, required: true }, // encrypted numeric as string
