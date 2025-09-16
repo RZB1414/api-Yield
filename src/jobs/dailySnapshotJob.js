@@ -64,6 +64,13 @@ export async function runDailySnapshot() {
     const uniqueSymbols = [...new Set(apiSymbols)];
     const quotesMap = {}; // apiSymbol -> quote
 
+    // Garante que índices (incluindo o único) estejam inicializados antes dos upserts
+    try {
+      await Snapshot.init();
+    } catch (idxErr) {
+      console.warn('[Snapshot] Warn initializing indexes:', idxErr.message);
+    }
+
     try {
       const batch = await yahooFinance.quote(uniqueSymbols);
       if (Array.isArray(batch)) {
@@ -89,7 +96,7 @@ export async function runDailySnapshot() {
         console.log('[Snapshot] Skip: symbol vazio');
         continue;
       }
-      const originalSymbol = pos.symbol.toUpperCase().trim();
+      const originalSymbol = pos.symbol.toUpperCase().trim(); // normaliza para consistência
       const apiSymbol = symbolMapping[originalSymbol];
       const q = quotesMap[apiSymbol];
       if (!q) {
@@ -118,26 +125,34 @@ export async function runDailySnapshot() {
         continue;
       }
 
-      const exists = await Snapshot.findOne({ userId: pos.userId, symbol: pos.symbol, tradingDate }).lean();
-      if (exists) {
-        // já existe
-        continue;
-      }
-
-      try {
-        await Snapshot.create({
+      // Armazena sempre o símbolo normalizado em uppercase (sem .SA) para evitar duplicados case-sensitive
+      // Mantemos o símbolo do usuário sem o sufixo .SA (se adicionamos apenas para consulta) assumindo que o cadastro original foi sem .SA.
+      const storedSymbol = originalSymbol.endsWith('.SA') ? originalSymbol.replace('.SA', '') : originalSymbol;
+      const filter = { userId: pos.userId, symbol: storedSymbol, tradingDate };
+      const update = {
+        $setOnInsert: {
           userId: pos.userId,
-          symbol: pos.symbol, // mantém símbolo original cadastrado pelo usuário
+          symbol: storedSymbol,
           currency: pos.currency,
           closePrice,
           dayChange,
           dayChangePercent,
-          tradingDate
-        });
-        created++;
-      } catch (createErr) {
-        if (createErr.code !== 11000) {
-          console.warn("[Snapshot] Create error:", createErr.message);
+          tradingDate,
+          createdAt: new Date()
+        }
+      };
+      try {
+        const res = await Snapshot.updateOne(filter, update, { upsert: true });
+        if (res.upsertedCount === 1 || (res.upserted && res.upserted.length)) {
+          created++;
+        } else {
+          // já existia; opcionalmente poderíamos atualizar preços, mas mantemos histórico congelado
+        }
+      } catch (upErr) {
+        if (upErr.code === 11000) {
+          // corrida vencida por outra operação; ignorar
+        } else {
+          console.warn('[Snapshot] Upsert error:', upErr.message);
         }
       }
     }
