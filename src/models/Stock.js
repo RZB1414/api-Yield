@@ -9,6 +9,7 @@ const stockSchema = new mongoose.Schema({
     userId: { type: String, required: true }
 })
 
+stockSchema.index({ userId: 1, symbol: 1 }, { unique: true })
 const stock = mongoose.model("stocks", stockSchema)
 
 export { stock, stockSchema }
