@@ -128,15 +128,28 @@ export async function runDailySnapshot() {
       // Armazena sempre o símbolo normalizado em uppercase (sem .SA) para evitar duplicados case-sensitive
       // Mantemos o símbolo do usuário sem o sufixo .SA (se adicionamos apenas para consulta) assumindo que o cadastro original foi sem .SA.
       const storedSymbol = originalSymbol.endsWith('.SA') ? originalSymbol.replace('.SA', '') : originalSymbol;
-      const filter = { userId: pos.userId, symbol: storedSymbol, tradingDate };
+
+      // Funções utilitárias
+      const encrypt = (val) => {
+        try { return CryptoJS.AES.encrypt(String(val), SECRET).toString(); } catch { return val; }
+      };
+      const hashSymbol = (sym) => {
+        // SHA-256 em hex
+        return CryptoJS.SHA256(sym).toString(CryptoJS.enc.Hex);
+      };
+
+      const symbolHash = hashSymbol(storedSymbol);
+      const filter = { userId: pos.userId, symbolHash, tradingDate };
+
       const update = {
         $setOnInsert: {
           userId: pos.userId,
-          symbol: storedSymbol,
-          currency: pos.currency,
-          closePrice,
-          dayChange,
-          dayChangePercent,
+          symbol: encrypt(storedSymbol), // agora criptografado
+            symbolHash,
+          currency: encrypt(pos.currency),
+          closePrice: encrypt(closePrice),
+          dayChange: encrypt(dayChange),
+          dayChangePercent: encrypt(dayChangePercent),
           tradingDate,
           createdAt: new Date()
         }
