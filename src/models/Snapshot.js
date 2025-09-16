@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 
 const snapshotSchema = new mongoose.Schema({
-  userId: { type: String, required: true, index: true },
-  symbol: { type: String, required: true, index: true },
+  userId: { type: String, required: true },
+  symbol: { type: String, required: true },
   currency: { type: String, required: true },
   closePrice: { type: Number, required: true },
   dayChange: { type: Number, required: true },
   dayChangePercent: { type: Number, required: true },
-  tradingDate: { type: Date, required: true, index: true },
+  tradingDate: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now }
 });
 
