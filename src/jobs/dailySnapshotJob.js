@@ -45,8 +45,24 @@ export async function runDailySnapshot() {
       };
     });
 
-    const uniqueSymbols = [...new Set(decryptedPositions.map(p => p.symbol).filter(Boolean))];
-    const quotesMap = {};
+    // Normalização de símbolos BRL (B3) adicionando sufixo .SA para consulta,
+    // mas mantendo o símbolo original salvo no snapshot.
+    const symbolMapping = {}; // originalSymbol -> apiSymbol
+    const apiSymbols = decryptedPositions.map(p => {
+      if (!p.symbol) return null;
+      const upper = p.symbol.toUpperCase().trim();
+      if (p.currency && p.currency.toUpperCase() === 'BRL') {
+        if (!upper.endsWith('.SA')) {
+          symbolMapping[upper] = upper + '.SA';
+          return upper + '.SA';
+        }
+      }
+      symbolMapping[upper] = upper; // sem alteração
+      return upper;
+    }).filter(Boolean);
+
+    const uniqueSymbols = [...new Set(apiSymbols)];
+    const quotesMap = {}; // apiSymbol -> quote
 
     try {
       const batch = await yahooFinance.quote(uniqueSymbols);
@@ -69,23 +85,49 @@ export async function runDailySnapshot() {
 
     let created = 0;
     for (const pos of decryptedPositions) {
-      const q = quotesMap[pos.symbol];
-      if (!q) continue;
+      if (!pos.symbol) {
+        console.log('[Snapshot] Skip: symbol vazio');
+        continue;
+      }
+      const originalSymbol = pos.symbol.toUpperCase().trim();
+      const apiSymbol = symbolMapping[originalSymbol];
+      const q = quotesMap[apiSymbol];
+      if (!q) {
+        console.log(`[Snapshot] Skip: quote não encontrado para ${originalSymbol} (apiSymbol=${apiSymbol})`);
+        continue;
+      }
 
-      const closePrice = q.regularMarketPrice;
-      const dayChange = q.regularMarketChange;
-      const dayChangePercent = q.regularMarketChangePercent;
+      let closePrice = q.regularMarketPrice;
+      let dayChange = q.regularMarketChange;
+      let dayChangePercent = q.regularMarketChangePercent;
 
-      if (closePrice == null || dayChange == null || dayChangePercent == null) continue;
-      if (q.regularMarketVolume === 0 || q.regularMarketVolume == null) continue; // possível feriado
+      // Fallback: se variação vier null mas temos previousClose
+      if ((dayChange == null || dayChangePercent == null) && q.regularMarketPreviousClose != null && closePrice != null) {
+        if (dayChange == null) dayChange = closePrice - q.regularMarketPreviousClose;
+        if (dayChangePercent == null && q.regularMarketPreviousClose !== 0) {
+          dayChangePercent = (dayChange / q.regularMarketPreviousClose) * 100;
+        }
+      }
+
+      if (closePrice == null) {
+        console.log(`[Snapshot] Skip: closePrice null ${originalSymbol}`);
+        continue;
+      }
+      if (dayChange == null || dayChangePercent == null) {
+        console.log(`[Snapshot] Skip: sem variação calculável ${originalSymbol}`);
+        continue;
+      }
 
       const exists = await Snapshot.findOne({ userId: pos.userId, symbol: pos.symbol, tradingDate }).lean();
-      if (exists) continue;
+      if (exists) {
+        // já existe
+        continue;
+      }
 
       try {
         await Snapshot.create({
           userId: pos.userId,
-          symbol: pos.symbol,
+          symbol: pos.symbol, // mantém símbolo original cadastrado pelo usuário
           currency: pos.currency,
           closePrice,
           dayChange,
