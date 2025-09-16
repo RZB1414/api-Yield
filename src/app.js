@@ -3,6 +3,7 @@ import routes from './routes/index.js';
 import cors from 'cors';
 import { encryptedDividends } from './models/EncryptedDividends.js';
 import { btgDividends } from './models/BtgDividends.js';
+import { Snapshot } from './models/Snapshot.js';
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -64,7 +65,10 @@ app.use((req, res, next) => {
         await btgDividends.syncIndexes(); // Sincroniza os índices com o banco de dados
         const btgIndexes = await btgDividends.collection.getIndexes();
 
-        console.log("Índices sincronizados com sucesso! Índices atuais:", indexes, btgIndexes);
+        await Snapshot.syncIndexes(); // Sincroniza os índices com o banco de dados
+        const snapshotIndexes = await Snapshot.collection.getIndexes();
+
+        console.log("Índices sincronizados com sucesso! Índices atuais:", indexes, btgIndexes, snapshotIndexes);
     } catch (error) {
         console.error("Erro ao sincronizar os índices:", error);
     }
