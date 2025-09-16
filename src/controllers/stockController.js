@@ -52,6 +52,7 @@ class StockController {
                     currentPrice: stockData.price.regularMarketPrice,
                     dayPriceChangePercent: stockData.price.regularMarketChangePercent,
                 }
+                
                 return res.status(200).json({'stock info: ' : stockInfo});
             } catch (error) {
                 attempt++;

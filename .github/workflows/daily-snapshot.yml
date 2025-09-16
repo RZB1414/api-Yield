@@ -1,0 +1,28 @@
+name: Daily Stock Snapshot
+
+on:
+  schedule:
+    - cron: "15 21 * * 1-5" # 21:15 UTC Monday-Friday
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --omit=dev || npm ci
+
+      - name: Run snapshot
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          CRYPTO_SECRET: ${{ secrets.CRYPTO_SECRET }}
+        run: npm run snapshot

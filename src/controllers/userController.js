@@ -42,6 +42,8 @@ class UserController {
             }
             const isMatch = await bcrypt.compare(password, foundUser.password);
             if (!isMatch) {
+                console.log('Password does not match for user: ', email);
+                
                 return res.status(401).json({ msg: "Invalid email or password" });
             }
 
@@ -52,6 +54,8 @@ class UserController {
             // Retorna o token no corpo da resposta
             res.status(200).json({ msg: "Login successful", accessToken });
         } catch (error) {
+            console.log('Error during login: ', error);
+            
             res.status(500).json({ msg: "Error logging in", error: error.message });
         }
     }
