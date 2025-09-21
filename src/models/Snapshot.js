@@ -1,9 +1,5 @@
 import mongoose from "mongoose";
 
-// Agora também criptografamos o symbol. Para manter capacidade de busca e unicidade,
-// adicionamos symbolHash (SHA-256 hex) que não permite reverter facilmente, mas possibilita índices.
-// Campos criptografados: symbol, currency, closePrice, dayChange, dayChangePercent.
-// Campos em texto: userId, symbolHash, tradingDate, createdAt.
 const snapshotSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   symbol: { type: String, required: true }, // encrypted
