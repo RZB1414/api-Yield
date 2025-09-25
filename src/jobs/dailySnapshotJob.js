@@ -63,8 +63,8 @@ export async function runDailySnapshot() {
       return upper;
     }).filter(Boolean);
 
-    const uniqueSymbols = [...new Set(apiSymbols)];
-    const quotesMap = {}; // apiSymbol -> quote
+  const uniqueSymbols = [...new Set(apiSymbols)];
+  const quotesMap = {}; // apiSymbol -> quote
 
     // Garante que índices (incluindo o único) estejam inicializados antes dos upserts
     try {
@@ -137,12 +137,17 @@ export async function runDailySnapshot() {
         }
       }
 
-      // Recalcula os valores para refletir o P&L do dia da sua posição
-      // dayChange -> variação do valor da sua posição no dia: (Δpreço por ação do dia) * quantidade
-      // dayChangePercent -> variação % do dia em relação ao seu custo (preço médio * quantidade)
+      // Define moeda alvo pela cotação (preferível) ou pelo sufixo .SA (B3)
+      const targetCurrency = (q && typeof q.currency === 'string'
+        ? q.currency.toUpperCase()
+        : (apiSymbol.endsWith('.SA') ? 'BRL' : 'USD'));
+
+      // Recalcula os valores para refletir o P&L do dia da sua posição, garantindo moeda alinhada
+      // dayChange -> variação do valor da sua posição no dia: (Δpreço por ação do dia) * quantidade, na moeda do ativo (targetCurrency)
+      // dayChangePercent -> variação % do dia em relação ao custo (preço médio convertido p/ targetCurrency * quantidade)
       const hasQty = typeof pos.stocksQuantity === 'number' && !isNaN(pos.stocksQuantity);
-      const hasAvg = typeof pos.averagePrice === 'number' && !isNaN(pos.averagePrice);
-      if (hasQty && hasAvg && closePrice != null) {
+      const hasAvgRaw = typeof pos.averagePrice === 'number' && !isNaN(pos.averagePrice);
+      if (hasQty && closePrice != null) {
         let prevClose = q?.regularMarketPreviousClose;
         if (prevClose == null && dayChange != null) {
           prevClose = closePrice - dayChange; // deduz previousClose pela variação por ação
@@ -154,12 +159,12 @@ export async function runDailySnapshot() {
 
         if (perShareChange != null) {
           const qty = pos.stocksQuantity;
-          const avg = pos.averagePrice;
+          const avg = pos.averagePrice; // mantém o preço médio original, sem conversão
           const positionChange = perShareChange * qty;
-          const baseCost = avg * qty;
-          const positionChangePercent = baseCost !== 0 ? (positionChange / baseCost) * 100 : 0;
+          const baseCost = (hasAvgRaw && isFinite(avg)) ? (avg * qty) : null;
+          const positionChangePercent = (baseCost && baseCost !== 0) ? (positionChange / baseCost) * 100 : null;
           dayChange = positionChange;
-          dayChangePercent = positionChangePercent;
+          dayChangePercent = positionChangePercent != null ? positionChangePercent : dayChangePercent;
         }
       }
 
@@ -197,7 +202,7 @@ export async function runDailySnapshot() {
           userId: pos.userId,
           symbol: encrypt(storedSymbol), // criptografado apenas ao inserir
           symbolHash,
-          currency: encrypt(pos.currency),
+          currency: encrypt(targetCurrency),
           tradingDate,
           createdAt: new Date()
         },
