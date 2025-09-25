@@ -1,6 +1,5 @@
 import yahooFinance from "yahoo-finance2"
 import { stock } from "../models/Stock.js"
-import { HoldingsHistory } from "../models/HoldingsHistory.js"
 import CryptoJS from "crypto-js"
 
 class StockController {
@@ -163,24 +162,7 @@ class StockController {
                     userId: userId
                 });
 
-                // Criar histórico inicial de holdings
-                try {
-                    const upperSymbol = symbol.toUpperCase().trim();
-                    const symbolHash = CryptoJS.SHA256(upperSymbol).toString(CryptoJS.enc.Hex);
-                    if (stocksQuantity !== undefined && stocksQuantity !== null && !isNaN(Number(stocksQuantity))) {
-                        await HoldingsHistory.create({
-                            userId,
-                            symbol: encryptedSymbol,
-                            symbolHash,
-                            quantity: encryptedStocksQuantity,
-                            averagePrice: encryptedAveragePrice,
-                            validFrom: new Date(),
-                            validTo: null
-                        });
-                    }
-                } catch (histErr) {
-                    console.warn('[HoldingsHistory] Erro ao criar histórico inicial:', histErr.message);
-                }
+                // Histórico de holdings descontinuado
                 return res.status(201).json({ msg: 'Stock created successfully', newStock });
             } catch (error) {
                 attempt++;
@@ -204,21 +186,7 @@ class StockController {
                 if (!stockExists) {
                     return res.status(200).json({ aviso: 'Stock not found' });
                 }
-                // Fecha histórico vigente antes de deletar
-                try {
-                    const secretKey = process.env.CRYPTO_SECRET;
-                    let decryptedSymbol = stockExists.symbol;
-                    try {
-                        decryptedSymbol = CryptoJS.AES.decrypt(stockExists.symbol, secretKey).toString(CryptoJS.enc.Utf8) || stockExists.symbol;
-                    } catch {}
-                    const symbolHash = CryptoJS.SHA256(decryptedSymbol.toUpperCase().trim()).toString(CryptoJS.enc.Hex);
-                    await HoldingsHistory.updateOne(
-                        { userId: stockExists.userId, symbolHash, validTo: null },
-                        { $set: { validTo: new Date() } }
-                    );
-                } catch (histErr) {
-                    console.warn('[HoldingsHistory] Erro ao fechar histórico na deleção:', histErr.message);
-                }
+                // Histórico de holdings descontinuado
                 await stock.deleteOne({ _id: id })
                 return res.status(200).json({ msg: 'Stock deleted successfully' });
             } catch (error) {
@@ -257,39 +225,7 @@ class StockController {
                 const encryptedAveragePrice = CryptoJS.AES.encrypt(averagePrice.toString(), secretKey).toString();
                 const encryptedStocksQuantity = CryptoJS.AES.encrypt(stocksQuantity.toString(), secretKey).toString();
 
-                // Detecta mudança de quantidade e atualiza histórico
-                try {
-                    let decryptedSymbol = stockExists.symbol;
-                    let prevQtyStr = stockExists.stocksQuantity;
-                    try {
-                        decryptedSymbol = CryptoJS.AES.decrypt(stockExists.symbol, secretKey).toString(CryptoJS.enc.Utf8) || stockExists.symbol;
-                        prevQtyStr = CryptoJS.AES.decrypt(stockExists.stocksQuantity, secretKey).toString(CryptoJS.enc.Utf8) || stockExists.stocksQuantity;
-                    } catch {}
-                    const prevQty = Number(prevQtyStr);
-                    const newQty = Number(stocksQuantity);
-                    if (!isNaN(newQty) && newQty !== prevQty) {
-                        const upperSymbol = decryptedSymbol.toUpperCase().trim();
-                        const symbolHash = CryptoJS.SHA256(upperSymbol).toString(CryptoJS.enc.Hex);
-                        const now = new Date();
-                        // Fecha o período anterior ainda aberto
-                        await HoldingsHistory.updateOne(
-                            { userId: stockExists.userId, symbolHash, validTo: null },
-                            { $set: { validTo: now } }
-                        );
-                        // Abre novo período
-                        await HoldingsHistory.create({
-                            userId: stockExists.userId,
-                            symbol: CryptoJS.AES.encrypt(upperSymbol, secretKey).toString(),
-                            symbolHash,
-                            quantity: encryptedStocksQuantity,
-                            averagePrice: encryptedAveragePrice,
-                            validFrom: now,
-                            validTo: null
-                        });
-                    }
-                } catch (histErr) {
-                    console.warn('[HoldingsHistory] Erro ao atualizar histórico:', histErr.message);
-                }
+                // Histórico de holdings descontinuado
 
                 const updatedStock = await stock.findByIdAndUpdate(
                     id,

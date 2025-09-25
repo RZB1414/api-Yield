@@ -4,7 +4,6 @@ import cors from 'cors';
 import { encryptedDividends } from './models/EncryptedDividends.js';
 import { btgDividends } from './models/BtgDividends.js';
 import { Snapshot } from './models/Snapshot.js';
-import { HoldingsHistory } from './models/HoldingsHistory.js';
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -69,10 +68,8 @@ app.use((req, res, next) => {
         await Snapshot.syncIndexes(); // Sincroniza os índices com o banco de dados
         const snapshotIndexes = await Snapshot.collection.getIndexes();
 
-    await HoldingsHistory.syncIndexes(); // Sincroniza os índices do histórico de holdings
-    const holdingsHistoryIndexes = await HoldingsHistory.collection.getIndexes();
 
-    console.log("Índices sincronizados com sucesso! Índices atuais:", indexes, btgIndexes, snapshotIndexes, holdingsHistoryIndexes);
+  console.log("Índices sincronizados com sucesso! Índices atuais:", indexes, btgIndexes, snapshotIndexes);
     } catch (error) {
         console.error("Erro ao sincronizar os índices:", error);
     }
