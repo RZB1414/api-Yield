@@ -9,7 +9,8 @@ const snapshotSchema = new mongoose.Schema({
   dayChange: { type: String, required: true }, // encrypted numeric as string
   dayChangePercent: { type: String, required: true }, // encrypted numeric as string
   tradingDate: { type: Date, required: true },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date }
 });
 
 snapshotSchema.index({ userId: 1, symbolHash: 1, tradingDate: 1 }, { unique: true });

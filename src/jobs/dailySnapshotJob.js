@@ -3,10 +3,13 @@ import CryptoJS from "crypto-js";
 import { stock } from "../models/Stock.js";
 import { Snapshot } from "../models/Snapshot.js";
 
-const SECRET = process.env.CRYPTO_SECRET;
-
 // Lógica reutilizável (não agenda aqui para poder ser chamada pelo GitHub Actions)
 export async function runDailySnapshot() {
+  // Lê a secret aqui para garantir que dotenv já tenha carregado
+  const SECRET = process.env.CRYPTO_SECRET;
+  if (!SECRET) {
+    console.warn("[Snapshot] CRYPTO_SECRET não definida. Tentando continuar, mas descriptografia pode falhar.");
+  }
   const now = new Date();
   const day = now.getUTCDay();
   if (day === 0 || day === 6) {
@@ -23,39 +26,38 @@ export async function runDailySnapshot() {
       return;
     }
 
-    const decryptedPositions = allPositions.map(p => {
-      let symbol = p.symbol;
-      let currency = p.currency;
-      let averagePrice = p.averagePrice;
-      let stocksQuantity = p.stocksQuantity;
+    // Descriptografia no estilo do StockController: tenta descriptografar e, se vier vazio, retorna o valor original
+    const decryptOrPass = (val) => {
+      if (val == null) return val;
       try {
-        symbol = CryptoJS.AES.decrypt(symbol, SECRET).toString(CryptoJS.enc.Utf8) || symbol;
-        currency = CryptoJS.AES.decrypt(currency, SECRET).toString(CryptoJS.enc.Utf8) || currency;
-        averagePrice = CryptoJS.AES.decrypt(averagePrice, SECRET).toString(CryptoJS.enc.Utf8) || averagePrice;
-        stocksQuantity = CryptoJS.AES.decrypt(stocksQuantity, SECRET).toString(CryptoJS.enc.Utf8) || stocksQuantity;
-      } catch (e) {
-        // ignore decryption errors; assume plain text
+        const s = CryptoJS.AES.decrypt(val, SECRET).toString(CryptoJS.enc.Utf8);
+        return s || val;
+      } catch {
+        return val;
       }
-      return {
-        userId: p.userId,
-        symbol,
-        currency,
-        averagePrice: parseFloat(averagePrice) || null,
-        stocksQuantity: parseFloat(stocksQuantity) || null
-      };
-    });
+    };
 
-    // Normalização de símbolos BRL (B3) adicionando sufixo .SA para consulta,
-    // mas mantendo o símbolo original salvo no snapshot.
+    const decryptedPositions = allPositions.map(p => ({
+      userId: p.userId,
+      symbol: decryptOrPass(p.symbol),
+      currency: decryptOrPass(p.currency),
+      averagePrice: parseFloat(decryptOrPass(p.averagePrice)) || null,
+      stocksQuantity: parseFloat(decryptOrPass(p.stocksQuantity)) || null
+    }));
+
+    // Normalização de símbolos para Yahoo Finance:
+    // - BRL (B3): adicionar sufixo .SA
+    // - Se currency não estiver presente, inferir: tickers com 4 letras + 1 dígito (ex: PETR4) costumam ser B3.
     const symbolMapping = {}; // originalSymbol -> apiSymbol
     const apiSymbols = decryptedPositions.map(p => {
       if (!p.symbol) return null;
       const upper = p.symbol.toUpperCase().trim();
-      if (p.currency && p.currency.toUpperCase() === 'BRL') {
-        if (!upper.endsWith('.SA')) {
-          symbolMapping[upper] = upper + '.SA';
-          return upper + '.SA';
-        }
+      const isLikelyB3 = /[A-Z]{4}\d{1,2}$/i.test(upper);
+      const isBRL = p.currency && p.currency.toUpperCase() === 'BRL';
+
+      if ((isBRL || (!p.currency && isLikelyB3)) && !upper.endsWith('.SA')) {
+        symbolMapping[upper] = `${upper}.SA`;
+        return `${upper}.SA`;
       }
       symbolMapping[upper] = upper; // sem alteração
       return upper;
@@ -72,11 +74,15 @@ export async function runDailySnapshot() {
     }
 
     try {
-      const batch = await yahooFinance.quote(uniqueSymbols);
+      if (!uniqueSymbols.length) {
+        console.log('[Snapshot] No symbols to quote after normalization.');
+      } else {
+        const batch = await yahooFinance.quote(uniqueSymbols);
       if (Array.isArray(batch)) {
         batch.forEach(q => { if (q && q.symbol) quotesMap[q.symbol] = q; });
       } else if (batch && batch.symbol) {
         quotesMap[batch.symbol] = batch;
+      }
       }
     } catch (err) {
       console.warn("[Snapshot] Batch quote fail, fallback one by one:", err.message);
@@ -90,29 +96,70 @@ export async function runDailySnapshot() {
       }
     }
 
-    let created = 0;
+  let created = 0;
+  let updated = 0;
     for (const pos of decryptedPositions) {
       if (!pos.symbol) {
         console.log('[Snapshot] Skip: symbol vazio');
         continue;
       }
       const originalSymbol = pos.symbol.toUpperCase().trim(); // normaliza para consistência
-      const apiSymbol = symbolMapping[originalSymbol];
+
+      // Se após tentativa ainda não temos um símbolo utilizável, pula
+      if (!pos.symbol || typeof pos.symbol !== 'string') {
+        console.warn(`[Snapshot] Invalid symbol after decryption. Skipping.`);
+        continue;
+      }
+
+      // Evita tentar consultar símbolos obviamente inválidos (com + / = típicos de base64)
+      if (/[+/=]/.test(originalSymbol)) {
+        console.warn(`[Snapshot] Invalid ticker format after normalization: ${originalSymbol}. Skipping.`);
+        continue;
+      }
+  const apiSymbol = symbolMapping[originalSymbol] ?? originalSymbol;
+      // Usa apenas cotações Yahoo (sem dados do frontend)
+      let closePrice, dayChange, dayChangePercent;
       const q = quotesMap[apiSymbol];
       if (!q) {
         console.log(`[Snapshot] Skip: quote não encontrado para ${originalSymbol} (apiSymbol=${apiSymbol})`);
         continue;
       }
-
-      let closePrice = q.regularMarketPrice;
-      let dayChange = q.regularMarketChange;
-      let dayChangePercent = q.regularMarketChangePercent;
+  closePrice = q.regularMarketPrice;
+  dayChange = q.regularMarketChange;
+  dayChangePercent = q.regularMarketChangePercent;
 
       // Fallback: se variação vier null mas temos previousClose
-      if ((dayChange == null || dayChangePercent == null) && q.regularMarketPreviousClose != null && closePrice != null) {
-        if (dayChange == null) dayChange = closePrice - q.regularMarketPreviousClose;
-        if (dayChangePercent == null && q.regularMarketPreviousClose !== 0) {
-          dayChangePercent = (dayChange / q.regularMarketPreviousClose) * 100;
+      if ((dayChange == null || dayChangePercent == null) && q?.regularMarketPreviousClose != null && closePrice != null) {
+        const prev = q.regularMarketPreviousClose;
+        if (dayChange == null) dayChange = closePrice - prev; // variação por ação
+        if (dayChangePercent == null && prev !== 0) {
+          dayChangePercent = (dayChange / prev) * 100; // variação por ação em %
+        }
+      }
+
+      // Recalcula os valores para refletir o P&L do dia da sua posição
+      // dayChange -> variação do valor da sua posição no dia: (Δpreço por ação do dia) * quantidade
+      // dayChangePercent -> variação % do dia em relação ao seu custo (preço médio * quantidade)
+      const hasQty = typeof pos.stocksQuantity === 'number' && !isNaN(pos.stocksQuantity);
+      const hasAvg = typeof pos.averagePrice === 'number' && !isNaN(pos.averagePrice);
+      if (hasQty && hasAvg && closePrice != null) {
+        let prevClose = q?.regularMarketPreviousClose;
+        if (prevClose == null && dayChange != null) {
+          prevClose = closePrice - dayChange; // deduz previousClose pela variação por ação
+        }
+        // Se conseguirmos obter variação por ação no dia, convertemos para variação da posição
+        const perShareChange = (prevClose != null && closePrice != null)
+          ? (closePrice - prevClose)
+          : (dayChange != null ? dayChange : null);
+
+        if (perShareChange != null) {
+          const qty = pos.stocksQuantity;
+          const avg = pos.averagePrice;
+          const positionChange = perShareChange * qty;
+          const baseCost = avg * qty;
+          const positionChangePercent = baseCost !== 0 ? (positionChange / baseCost) * 100 : 0;
+          dayChange = positionChange;
+          dayChangePercent = positionChangePercent;
         }
       }
 
@@ -130,36 +177,43 @@ export async function runDailySnapshot() {
       const storedSymbol = originalSymbol.endsWith('.SA') ? originalSymbol.replace('.SA', '') : originalSymbol;
 
       // Funções utilitárias
+      const looksEncrypted = (val) => typeof val === 'string' && /^U2FsdGVkX1/i.test(val);
       const encrypt = (val) => {
-        try { return CryptoJS.AES.encrypt(String(val), SECRET).toString(); } catch { return val; }
+        if (val == null) return val;
+        const s = String(val);
+        if (looksEncrypted(s)) return s; // evita duplo encryption
+        try { return CryptoJS.AES.encrypt(s, SECRET).toString(); } catch { return s; }
       };
       const hashSymbol = (sym) => {
         // SHA-256 em hex
         return CryptoJS.SHA256(sym).toString(CryptoJS.enc.Hex);
       };
 
-      const symbolHash = hashSymbol(storedSymbol);
+  const symbolHash = hashSymbol(storedSymbol);
       const filter = { userId: pos.userId, symbolHash, tradingDate };
 
       const update = {
         $setOnInsert: {
           userId: pos.userId,
-          symbol: encrypt(storedSymbol), // agora criptografado
-            symbolHash,
+          symbol: encrypt(storedSymbol), // criptografado apenas ao inserir
+          symbolHash,
           currency: encrypt(pos.currency),
+          tradingDate,
+          createdAt: new Date()
+        },
+        $set: {
           closePrice: encrypt(closePrice),
           dayChange: encrypt(dayChange),
           dayChangePercent: encrypt(dayChangePercent),
-          tradingDate,
-          createdAt: new Date()
+          updatedAt: new Date()
         }
       };
       try {
         const res = await Snapshot.updateOne(filter, update, { upsert: true });
         if (res.upsertedCount === 1 || (res.upserted && res.upserted.length)) {
           created++;
-        } else {
-          // já existia; opcionalmente poderíamos atualizar preços, mas mantemos histórico congelado
+        } else if (res.matchedCount >= 1) {
+          updated++;
         }
       } catch (upErr) {
         if (upErr.code === 11000) {
@@ -170,7 +224,7 @@ export async function runDailySnapshot() {
       }
     }
 
-    console.log(`[Snapshot] Done. New snapshots: ${created}`);
+    console.log(`[Snapshot] Done. New snapshots: ${created}, Updated snapshots: ${updated}`);
   } catch (error) {
     console.error("[Snapshot] General error:", error.message);
   }

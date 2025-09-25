@@ -1,0 +1,24 @@
+name: Daily Snapshots
+
+on:
+  schedule:
+    # Rodar nos dias úteis após o último fechamento entre B3 e NYSE (UTC), com margem para atrasos e sazonalidade (DST).
+    # GitHub Actions usa UTC. 21:40 UTC cobre ambos os fechamentos ao longo do ano.
+    - cron: '40 21 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --omit=dev
+      - name: Run snapshot job
+        run: node scripts/runSnapshot.js
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          CRYPTO_SECRET: ${{ secrets.CRYPTO_SECRET }}

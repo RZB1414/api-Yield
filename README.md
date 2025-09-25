@@ -97,3 +97,15 @@ Developed by Renan Buiatti
 📫 renanbuiatti14@gmail.com
 🌐 LinkedIn www.linkedin.com/in/renan-buiatti-13787924a
 📷 Instagram renanbuiatti
+
+---
+
+## 📸 Daily Snapshots (Prices and Daily Change)
+
+This API can take a daily snapshot of each holding's price and daily change using Yahoo Finance. A CLI runner is available:
+
+```
+npm run snapshot
+```
+
+If you see logs like `Symbol appears encrypted and decryption failed. Check CRYPTO_SECRET. Skipping ...`, verifique se a chave `CRYPTO_SECRET` usada pelo job é a mesma usada ao cadastrar os ativos.

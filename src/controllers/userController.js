@@ -52,6 +52,9 @@ class UserController {
             const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "15m" });
 
             // Retorna o token no corpo da resposta
+
+            console.log('access token', accessToken);
+            
             res.status(200).json({ msg: "Login successful", accessToken });
         } catch (error) {
             console.log('Error during login: ', error);

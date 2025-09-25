@@ -144,13 +144,14 @@ class StockController {
         let attempt = 0;
         while (attempt < 2) {
             try {
-                const stockExists = await stock.findOne({ symbol: symbol });
+                const secretKey = process.env.CRYPTO_SECRET;
+                const encryptedSymbol = CryptoJS.AES.encrypt(symbol, secretKey).toString();
+
+                // Checagem correta de duplicidade: por usuário + símbolo criptografado
+                const stockExists = await stock.findOne({ userId: userId, symbol: encryptedSymbol });
                 if (stockExists) {
                     return res.status(200).json({ aviso: 'Stock already exists' });
                 }
-
-                const secretKey = process.env.CRYPTO_SECRET;
-                const encryptedSymbol = CryptoJS.AES.encrypt(symbol, secretKey).toString();
                 const encryptedCurrency = CryptoJS.AES.encrypt(currency, secretKey).toString();
                 const encryptedAveragePrice = CryptoJS.AES.encrypt(averagePrice.toString(), secretKey).toString();
                 const encryptedStocksQuantity = CryptoJS.AES.encrypt(stocksQuantity.toString(), secretKey).toString();

@@ -7,13 +7,14 @@ import users from './usersRoutes.js'
 import creditCards from './creditCardsRoutes.js'
 import btgDividends from './btgDividends.js'
 import holdingsHistory from './holdingsHistoryRoutes.js'
+import snapshots from './snapshotsRoutes.js'
 
 const routes = (app) => {
     app.route('/').get((req, res) => res.status(200).send(
         'Yield. Management system.'
     ))
 
-    app.use(express.json(), stocks, brokers, totalValueBrokers, encryptedDividends, users, creditCards, btgDividends, holdingsHistory)
+    app.use(express.json(), stocks, brokers, totalValueBrokers, encryptedDividends, users, creditCards, btgDividends, holdingsHistory, snapshots)
 }
 
 export default routes
