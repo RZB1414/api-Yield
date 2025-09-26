@@ -59,6 +59,10 @@ class SnapshotController {
         closePrice: decryptNum(d.closePrice),
         dayChange: decryptNum(d.dayChange),
         dayChangePercent: decryptNum(d.dayChangePercent),
+        fxUSDBRL: decryptNum(d.fxUSDBRL),
+        fxBRLUSD: decryptNum(d.fxBRLUSD),
+        totalValueUSD: decryptNum(d.totalValueUSD),
+        totalValueBRL: decryptNum(d.totalValueBRL),
         tradingDate: d.tradingDate,
         createdAt: d.createdAt
       }));

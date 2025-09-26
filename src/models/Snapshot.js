@@ -10,7 +10,12 @@ const snapshotSchema = new mongoose.Schema({
   dayChangePercent: { type: String, required: true }, // encrypted numeric as string
   tradingDate: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date }
+  updatedAt: { type: Date },
+  // optional FX rates captured at snapshot time (encrypted numeric as string)
+  fxUSDBRL: { type: String }, // BRL per 1 USD
+  fxBRLUSD: { type: String }, // USD per 1 BRL
+  totalValueUSD: { type: String }, // encrypted numeric as string
+  totalValueBRL: { type: String }  // encrypted numeric as string
 });
 
 snapshotSchema.index({ userId: 1, symbolHash: 1, tradingDate: 1 }, { unique: true });

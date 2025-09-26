@@ -65,6 +65,7 @@ export async function runDailySnapshot() {
 
   const uniqueSymbols = [...new Set(apiSymbols)];
   const quotesMap = {}; // apiSymbol -> quote
+  let fxUSDBRL = null; // cache de câmbio por execução
 
     // Garante que índices (incluindo o único) estejam inicializados antes dos upserts
     try {
@@ -94,6 +95,15 @@ export async function runDailySnapshot() {
           console.warn(`[Snapshot] Failed quote ${sym}:`, er.message);
         }
       }
+    }
+
+    // Busca taxa USDBRL uma vez por execução (opcional, para enriquecer snapshots)
+    try {
+      const fx = await yahooFinance.quote('USDBRL=X');
+      const rate = fx?.regularMarketPrice;
+      if (typeof rate === 'number' && isFinite(rate)) fxUSDBRL = rate; // BRL por 1 USD
+    } catch (e) {
+      console.warn('[Snapshot] Não foi possível obter USDBRL=X:', e.message);
     }
 
   let created = 0;
@@ -147,6 +157,7 @@ export async function runDailySnapshot() {
       // dayChangePercent -> variação % do dia em relação ao custo (preço médio convertido p/ targetCurrency * quantidade)
       const hasQty = typeof pos.stocksQuantity === 'number' && !isNaN(pos.stocksQuantity);
       const hasAvgRaw = typeof pos.averagePrice === 'number' && !isNaN(pos.averagePrice);
+      let positionValue = null;
       if (hasQty && closePrice != null) {
         let prevClose = q?.regularMarketPreviousClose;
         if (prevClose == null && dayChange != null) {
@@ -166,6 +177,7 @@ export async function runDailySnapshot() {
           dayChange = positionChange;
           dayChangePercent = positionChangePercent != null ? positionChangePercent : dayChangePercent;
         }
+        positionValue = closePrice * pos.stocksQuantity;
       }
 
       if (closePrice == null) {
@@ -197,6 +209,23 @@ export async function runDailySnapshot() {
   const symbolHash = hashSymbol(storedSymbol);
       const filter = { userId: pos.userId, symbolHash, tradingDate };
 
+      let totalValueUSD = null;
+      let totalValueBRL = null;
+      if (positionValue != null) {
+        if (targetCurrency === 'BRL') {
+          totalValueBRL = positionValue;
+          if (fxUSDBRL != null && fxUSDBRL !== 0) totalValueUSD = positionValue / fxUSDBRL;
+        } else if (targetCurrency === 'USD') {
+          totalValueUSD = positionValue;
+          if (fxUSDBRL != null) totalValueBRL = positionValue * fxUSDBRL;
+        } else {
+          // Para outras moedas, apenas mantém a moeda original
+          if (targetCurrency) {
+            // se informada BRL/USD via pos.currency, poderia ajustar no futuro
+          }
+        }
+      }
+
       const update = {
         $setOnInsert: {
           userId: pos.userId,
@@ -210,7 +239,11 @@ export async function runDailySnapshot() {
           closePrice: encrypt(closePrice),
           dayChange: encrypt(dayChange),
           dayChangePercent: encrypt(dayChangePercent),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          fxUSDBRL: fxUSDBRL != null ? encrypt(fxUSDBRL) : undefined,
+          fxBRLUSD: fxUSDBRL != null && fxUSDBRL !== 0 ? encrypt(1 / fxUSDBRL) : undefined,
+          totalValueUSD: totalValueUSD != null ? encrypt(totalValueUSD) : undefined,
+          totalValueBRL: totalValueBRL != null ? encrypt(totalValueBRL) : undefined
         }
       };
       try {
